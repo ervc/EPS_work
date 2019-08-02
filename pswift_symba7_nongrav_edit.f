@@ -93,7 +93,8 @@ c Initialize initial time and times for first output and first dump
 
 c...    Do the initial io write
       if(btest(iflgchk,0))  then ! bit 0 is set
-         call io_write_frame(t0,nbod,ntp,mass,xh,yh,zh,vxh,vyh,vzh,
+         call 
+         ite_frame(t0,nbod,ntp,mass,xh,yh,zh,vxh,vyh,vzh,
      &        xht,yht,zht,vxht,vyht,vzht,istat,outfile,iub,fopenstat)
          call io_write_mass(t0,nbod,mass,outfile,ium,fopenstat)
       endif
@@ -379,6 +380,20 @@ c...  Internals:
 
 c    Insert code here to calculate accelerations
 
+c    Constants and conversions
+      real*8 m2au, s2yr, kg2code
+      real*8 e, twopi, sig, c
+
+      m2au = 6.6849e-12
+      s2yr = 3.17098e-8
+      twopi = 2.0*4.0*atan(1.)
+      kg2code = twopi**(2.)/(1.989e30)
+      e = 2.71828
+      c = 3.0e8*m2au/s2yr
+
+c    Didymos parameters
+      real*8 alpha, k, thermal_cap, p_rot, omega, rho_bulk
+      real*8 rho_s, rad, temp
 
 c    Accelerations are added to velocities here
       do i=2,nbod
