@@ -93,8 +93,7 @@ c Initialize initial time and times for first output and first dump
 
 c...    Do the initial io write
       if(btest(iflgchk,0))  then ! bit 0 is set
-         call 
-         ite_frame(t0,nbod,ntp,mass,xh,yh,zh,vxh,vyh,vzh,
+         call io_write_frame(t0,nbod,ntp,mass,xh,yh,zh,vxh,vyh,vzh,
      &        xht,yht,zht,vxht,vyht,vzht,istat,outfile,iub,fopenstat)
          call io_write_mass(t0,nbod,mass,outfile,ium,fopenstat)
       endif
