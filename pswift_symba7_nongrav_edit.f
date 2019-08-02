@@ -379,6 +379,8 @@ c...  Internals:
 
 c    Insert code here to calculate accelerations
 
+
+c    Accelerations are added to velocities here
       do i=2,nbod
          vxh(i) = vxh(i) + axh(i)*dt
          vyh(i) = vyh(i) + ayh(i)*dt
