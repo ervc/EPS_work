@@ -390,6 +390,18 @@ c     Didymos parameters
 c     Algebra parameters
       real*8 theta, l_d, x, lam
 
+c     complex modulus and phase
+      real*8 g_mod, delta
+
+c     complex components to calculate g and phi
+      complex g_num, g_den, g_complex
+
+c     vector components of r cross spin and spin cross (r cross spin)
+      real*8 x_rxs(nbod), y_rxs(nbod), z_rxs(nbod)
+      real*8 x_srs(nbod), y_srs(nbod), z_srs(nbod)
+
+
+
       m2au = 6.6849e-12
       s2yr = 3.17098e-8
       twopi = 2.0*4.0*atan(1.)
@@ -430,7 +442,22 @@ c     specific thermal capacity approx 500 J kg^-1 K^-1
          x = 2**(1./2.)*rad/l_d
          lam = theta/x
 
-         a_calc(x)
+         a = a_calc(x)
+         b = b_calc(x)
+         c = c_calc(x,lam)
+         d = d_calc(x,lam)
+
+         g_num = complex(a,b)
+         g_den = complex(c,d)
+
+         g_complex = g_num/g_den
+
+         g_mod = cabs(g_complex)
+         delta = atan(imag(g_complex), real(g_complex))
+
+c     calculate vector components of accel
+         call cross(xh(i), yh(i), zh(i), 0., 0., 1., x_rxs, y_rxs, z_rxs)
+         call cross(0.,0.,1.,x_rxs, y_rxs, z_rxs, )
 
          vxh(i) = vxh(i) + axh(i)*dt
          vyh(i) = vyh(i) + ayh(i)*dt
@@ -449,7 +476,7 @@ c     output
 c     internal
       real*8 e
       e = 2.71828
-      
+
       a_calc = -(x+2.0) - (e**x)*((x-2.0)*cos(x)-x*sin(x))
       return
       end
@@ -468,27 +495,44 @@ c     internal
       end
       
 
-      function c_calc(x)
+      function c_calc(x,lam)
 c     input
       real*8 x
 c     output
       real*8 c_calc
 c     internal
-      real*8 e
+      real*8 e, a
       e = 2.71828
-      
+      a = a_calc(x)
+
+      c = a+lam/(1.0+lam)*(3.0*(x+2.0)+(e**x)*(3.0*(x-2.0)*cos(x)+x*(x-3.0)*sin(x)))
       return
       end
       
 
-      function d_calc(x)
+      function d_calc(x,lam)
 c     input
       real*8 x
 c     output
       real*8 d_calc
 c     internal
-      real*8 e
+      real*8 e, b
       e = 2.71828
+      b = b_calc(x)
+
+      d = b+lam/(1.0+lam)*(x*(x+3.0)-(e**x)*(x*(x-3.0)*cos(x)-3.0*(x-2.0)*sin(x)))
+      return
+      end
+
+      subroutine cross(x1,y1,z1,x2,y2,z2,x3,y3,z3)
+c     input
+      real*8 x1,y1,z1,x2,y2,z2
+c     output
+      real*8 x3,y3,z3
+
+      x3 = y1*z2 - z1*y2
+      y3 = z1*x2 - x1*z2
+      z3 = x1*y2 - y1*x2
 
       return
       end
