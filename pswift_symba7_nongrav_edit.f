@@ -430,6 +430,8 @@ c     specific thermal capacity approx 500 J kg^-1 K^-1
          x = 2**(1./2.)*rad/l_d
          lam = theta/x
 
+         a_calc(x)
+
          vxh(i) = vxh(i) + axh(i)*dt
          vyh(i) = vyh(i) + ayh(i)*dt
          vzh(i) = vzh(i) + azh(i)*dt
@@ -437,3 +439,67 @@ c     specific thermal capacity approx 500 J kg^-1 K^-1
 
 
       end
+
+
+      function a_calc(x)
+c     input
+      real*8 x
+c     output
+      real*8 a_calc
+c     internal
+      real*8 e
+      e = 2.71828
+      
+      a_calc = -(x+2.0) - (e**x)*((x-2.0)*cos(x)-x*sin(x))
+      return
+      end
+
+      function b_calc(x)
+c     input
+      real*8 x
+c     output
+      real*8 b_calc
+c     internal
+      real*8 e
+      e = 2.71828
+
+      b_calc = -x-(e**x)*(x*cos(x)+(x-2.0)*sin(x))
+      return
+      end
+      
+
+      function c_calc(x)
+c     input
+      real*8 x
+c     output
+      real*8 c_calc
+c     internal
+      real*8 e
+      e = 2.71828
+      
+      return
+      end
+      
+
+      function d_calc(x)
+c     input
+      real*8 x
+c     output
+      real*8 d_calc
+c     internal
+      real*8 e
+      e = 2.71828
+
+      return
+      end
+      
+
+
+
+
+
+
+
+
+
+
