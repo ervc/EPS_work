@@ -302,7 +302,7 @@ c...  Executable code
       dth = 0.5d0*dt
 
 c     changes the velocities according to tides
-      call tidal_kick(nbod,nbodm,mass,xh,yh,zh,vxh,vyh
+      call nongrav_kick(nbod,nbodm,mass,rplxh,yh,zh,vxh,vyh
      &     ,vzh,dth)
 
 c...  Convert vel to bery to jacobi coords
@@ -349,14 +349,14 @@ c...  convert back to helio velocities
       call coord_vb2h(nbod,mass,vxb,vyb,vzb,vxh,vyh,vzh)
 
 c     changes the velocities according to tides
-      call tidal_kick(nbod,nbodm,mass,xh,yh,zh,vxh,vyh
+      call nongrav_kick(nbod,nbodm,mass,rpl,xh,yh,zh,vxh,vyh
      &     ,vzh,dth)
 
       return
       end   ! symba7_step_interp
 c---------------------------------------------------------------------
 
-      subroutine gasdrag_kick(nbod,nbodm,mass,xh,yh,zh,vxh,vyh
+      subroutine nongrav_kick(nbod,nbodm,mass,rpl,xh,yh,zh,vxh,vyh
      &     ,vzh,dt)
 
       include 'swift.inc'
@@ -375,20 +375,23 @@ c...  Inputs and Output:
 
 c...  Internals:
       integer i,id,i1st,iten,j
-      real*8 axh(nbod),ayh(nbod),azh(nbod)
+      real*8 axh,ayh,azh
 
 c     Insert code here to calculate accelerations
 
 c     Constants and conversions
-      real*8 m2au, s2yr, kg2code
-      real*8 e, twopi, sig, c
+      real*8 m2au, s2yr, kg2code, sol_lum
+      real*8 e, twopi, sig, speed_of_light, dis
 
 c     Didymos parameters
       real*8 alpha, k, thermal_cap, p_rot, omega, rho_bulk
-      real*8 rho_s, rad, temp
+      real*8 rho_s, rad, temp, emis, flux, phi_r
 
 c     Algebra parameters
       real*8 theta, l_d, x, lam
+
+c     arguments for functions
+      real*8 a,b,c,d
 
 c     complex modulus and phase
       real*8 g_mod, delta
@@ -397,17 +400,17 @@ c     complex components to calculate g and phi
       complex g_num, g_den, g_complex
 
 c     vector components of r cross spin and spin cross (r cross spin)
-      real*8 x_rxs(nbod), y_rxs(nbod), z_rxs(nbod)
-      real*8 x_srs(nbod), y_srs(nbod), z_srs(nbod)
+      real*8 x_rxs, y_rxs, z_rxs
+      real*8 x_srs, y_srs, z_srs
 
 
-
+      sol_lum = 3.828e26*kg2code*(m2au**2.)/(s2yr**3.)
       m2au = 6.6849e-12
       s2yr = 3.17098e-8
       twopi = 2.0*4.0*atan(1.)
       kg2code = twopi**(2.)/(1.989e30)
       e = 2.71828
-      c = 3.0e8*m2au/s2yr
+      speed_of_light = 3.0e8*m2au/s2yr
 c     convert steffan boltzmann to code units
 c     sigma = W m^-2 K^-4 = kg m^2 s^-3 m^-2 K^-4 = kg s^-3 K^-4
 c     convert to 4pi^2 yr^-3 K^-4
@@ -421,25 +424,28 @@ c     period of rotation = 2.26 hr = 2.58e-4 yr
       p_rot = 2.58e-4
       omega = twopi/p_rot
 c     bulk density = 2104 kg m^-3
-      rho_bulk = 2104*kg2code/(m2au**3.)
+      rho_bulk = 2104.*kg2code/(m2au**3.)
 c     surface density
       rho_s = rho_bulk
-c     rad = radius = 0.390 km (can we add an input to the subroutine?)
-      rad = 390.0*m2au
-c     Temp can be calculated from sun emission in Kelvin?
-      temp = 300.0
 
 
 c    Accelerations are added to velocities here
 
-      do i=2,nbod
+      do i=9,nbod
 c     specific thermal capacity approx 500 J kg^-1 K^-1
          thermal_cap = 500.0*mass(i)*(m2au**2.0)/(s2yr**2.0)
 
-         theta = (k*rho_s*thermal_cap*omega)**(1./2.)/(sig*temp**3.)
+         rad = rpl(i)
+         dis = (xh(i)**2. + yh(i)**2. + zh(i)**2.)**(1./2.)
+
+         flux = sol_lum/(8.*twopi*dis**2.)
+         temp = alpha*flux/(emis*sig)
+         phi_r = 3.*flux/(4.*rad*rho_bulk*speed_of_light)
+
+         theta = (k*rho_s*thermal_cap*omega)**(1./2.)/(emis*sig*temp**3.)
          l_d = (k/(rho_s*thermal_cap*omega))**(1./2.)
 
-         x = 2**(1./2.)*rad/l_d
+         x = 2.**(1./2.)*rad/l_d
          lam = theta/x
 
          a = a_calc(x)
@@ -457,11 +463,16 @@ c     specific thermal capacity approx 500 J kg^-1 K^-1
 
 c     calculate vector components of accel
          call cross(xh(i), yh(i), zh(i), 0., 0., 1., x_rxs, y_rxs, z_rxs)
-         call cross(0.,0.,1.,x_rxs, y_rxs, z_rxs, )
+         call cross(0.,0.,1.,x_rxs, y_rxs, z_rxs, x_srs, y_srs, z_srs)
 
-         vxh(i) = vxh(i) + axh(i)*dt
-         vyh(i) = vyh(i) + ayh(i)*dt
-         vzh(i) = vzh(i) + azh(i)*dt
+c     calculate x,y,z accelerations
+         axh = (4.*alpha*phi_r*g_mod/(9.*(1.+lam)*dis))*(sin(delta)*x_rxs + cos(delta)*x_srs)
+         ayh = (4.*alpha*phi_r*g_mod/(9.*(1.+lam)*dis))*(sin(delta)*y_rxs + cos(delta)*y_srs)
+         azh = (4.*alpha*phi_r*g_mod/(9.*(1.+lam)*dis))*(sin(delta)*z_rxs + cos(delta)*z_srs)
+
+         vxh(i) = vxh(i) + axh*dt
+         vyh(i) = vyh(i) + ayh*dt
+         vzh(i) = vzh(i) + azh*dt
       enddo
 
 
