@@ -377,11 +377,18 @@ c...  Internals:
       integer i,id,i1st,iten,j
       real*8 axh(nbod),ayh(nbod),azh(nbod)
 
-c    Insert code here to calculate accelerations
+c     Insert code here to calculate accelerations
 
-c    Constants and conversions
+c     Constants and conversions
       real*8 m2au, s2yr, kg2code
       real*8 e, twopi, sig, c
+
+c     Didymos parameters
+      real*8 alpha, k, thermal_cap, p_rot, omega, rho_bulk
+      real*8 rho_s, rad, temp
+
+c     Algebra parameters
+      real*8 theta, l_d, x, lam
 
       m2au = 6.6849e-12
       s2yr = 3.17098e-8
@@ -389,13 +396,40 @@ c    Constants and conversions
       kg2code = twopi**(2.)/(1.989e30)
       e = 2.71828
       c = 3.0e8*m2au/s2yr
+c     convert steffan boltzmann to code units
+c     sigma = W m^-2 K^-4 = kg m^2 s^-3 m^-2 K^-4 = kg s^-3 K^-4
+c     convert to 4pi^2 yr^-3 K^-4
+      sig = 5.670E-8*kg2code/(s2yr**3.0)
 
-c    Didymos parameters
-      real*8 alpha, k, thermal_cap, p_rot, omega, rho_bulk
-      real*8 rho_s, rad, temp
+c     alpha = 1-albedo = 1-0.15
+      alpha = 0.85
+c     thermal conductivity in W m^-1 K^-1 
+      k = 0.1*kg2code*m2au/(s2yr**2.)
+c     period of rotation = 2.26 hr = 2.58e-4 yr
+      p_rot = 2.58e-4
+      omega = twopi/p_rot
+c     bulk density = 2104 kg m^-3
+      rho_bulk = 2104*kg2code/(m2au**3.)
+c     surface density
+      rho_s = rho_bulk
+c     rad = radius = 0.390 km (can we add an input to the subroutine?)
+      rad = 390.0*m2au
+c     Temp can be calculated from sun emission in Kelvin?
+      temp = 300.0
+
 
 c    Accelerations are added to velocities here
+
       do i=2,nbod
+c     specific thermal capacity approx 500 J kg^-1 K^-1
+         thermal_cap = 500.0*mass(i)*(m2au**2.0)/(s2yr**2.0)
+
+         theta = (k*rho_s*thermal_cap*omega)**(1./2.)/(sig*temp**3.)
+         l_d = (k/(rho_s*thermal_cap*omega))**(1./2.)
+
+         x = 2**(1./2.)*rad/l_d
+         lam = theta/x
+
          vxh(i) = vxh(i) + axh(i)*dt
          vyh(i) = vyh(i) + ayh(i)*dt
          vzh(i) = vzh(i) + azh(i)*dt
